@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫畫新紀元：AI 輔助創作研習工作坊</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#020617',
+                        slate: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        primary: '#a855f7',
+                        secondary: '#22d3ee',
+                        accent: '#f43f5e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617;
+            color: #cbd5e1;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(45deg, #a855f7, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .prompt-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(168, 85, 247, 0.2);
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        /* 自定義捲軸 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        /* 內容區塊捲軸 (給Prompt框用) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        /* 主頁面切換動畫 (Tab Layout) */
+        .page-content {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .page-content.active {
+            display: block;
+        }
+
+        /* 子頁籤切換動畫 */
+        .tab-content {
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 導覽列活動狀態 */
+        .nav-link.active {
+            color: #22d3ee;
+            font-weight: 700;
+            position: relative;
+        }
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #a855f7, #22d3ee);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-primary selection:text-white relative min-h-screen flex flex-col">
+
+    <!-- 頂部導覽列 -->
+    <nav class="fixed w-full z-50 glass-panel border-b-0 border-white/10 shadow-lg top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="switchPage('page-concept')">
+                    <i class="fa-solid fa-wand-magic-sparkles text-secondary text-xl"></i>
+                    <span class="font-bold text-xl tracking-tight text-white hidden sm:block">AI 漫畫研習</span>
+                </div>
+                <div class="hidden lg:flex space-x-6 text-sm font-medium">
+                    <button onclick="switchPage('page-concept')" class="nav-link active text-gray-300 hover:text-secondary transition relative pb-1">1. 概念啟發</button>
+                    <button onclick="switchPage('page-style')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">2. 漫畫風格</button>
+                    <button onclick="switchPage('page-inspiration')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">3. 劇本發想</button>
+                    <button onclick="switchPage('page-tools')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">4. 圖像生成</button>
+                    <button onclick="switchPage('page-layout')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">5. Gem助理</button>
+                    <button onclick="switchPage('page-copyright')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">6. 版權觀念</button>
+                    <button onclick="switchPage('page-pdf')" class="nav-link text-gray-300 hover:text-secondary transition relative pb-1">7. 輸出打包</button>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="lg:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-gray-300 hover:text-white focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden lg:hidden bg-slate-900 border-t border-gray-800 px-4 pt-2 pb-4 space-y-2 absolute w-full shadow-2xl">
+            <button onclick="switchPage('page-concept')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary active-mobile text-secondary">1. 概念啟發</button>
+            <button onclick="switchPage('page-style')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">2. 漫畫風格</button>
+            <button onclick="switchPage('page-inspiration')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">3. 劇本發想與提示詞</button>
+            <button onclick="switchPage('page-tools')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">4. 圖像生成工具</button>
+            <button onclick="switchPage('page-layout')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">5. Gem助理</button>
+            <button onclick="switchPage('page-copyright')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">6. 版權觀念</button>
+            <button onclick="switchPage('page-pdf')" class="w-full text-left mobile-nav-link block py-2 text-base font-medium text-gray-300 hover:text-secondary">7. 輸出打包</button>
+        </div>
+    </nav>
+
+    <!-- 背景裝飾 (全域) -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[100px]"></div>
+    </div>
+
+    <!-- 主要內容區 (Tab 切換容器) -->
+    <main class="relative z-10 flex-grow w-full pt-24 pb-12">
+        
+        <!-- ================= PAGE 1: 概念啟發 ================= -->
+        <div id="page-concept" class="page-content active max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Hero Section -->
+            <header class="relative py-12 lg:py-20 text-center">
+                <span class="inline-block py-1 px-4 rounded-full border border-secondary/30 bg-secondary/10 text-xs font-semibold tracking-widest text-secondary mb-6 uppercase">
+                    Workshop 2026
+                </span>
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight text-white font-sans">
+                    漫畫新紀元：<br/>
+                    <span class="gradient-text">AI 輔助創作</span>研習
+                </h1>
+                <p class="mt-6 text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
+                    打破繪畫技術的門檻，讓 AI 成為你的得力助手。<br class="hidden md:block">只要你有好點子，就能成為漫畫家！
+                </p>
+                <div class="mt-10">
+                    <button onclick="switchPage('page-style')" class="px-8 py-4 rounded-lg bg-gradient-to-r from-primary to-secondary text-white font-bold hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition transform hover:-translate-y-1">
+                        開始探索課程 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="text-center mb-10 mt-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-white mb-4"><span class="text-primary mr-2">1.</span>概念啟發</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-primary to-secondary mx-auto rounded"></div>
+            </div>
+            
+            <div class="glass-panel rounded-2xl p-8 md:p-12 relative overflow-hidden max-w-5xl mx-auto">
+                <div class="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-primary to-secondary"></div>
+                
+                <h3 class="text-2xl text-white font-bold mb-6">AI 是取代創作者，還是賦能創作者？</h3>
+                <p class="text-xl text-gray-300 mb-10 leading-relaxed">
+                    在漫畫創作中，<strong>「故事」與「分鏡」才是真正的靈魂</strong>。AI 並不是來取代你的，它是你手下的數位美術助理。作為導演的你，負責決定要畫什麼、傳達什麼情感。
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-slate-800/80 rounded-xl p-6 border border-slate-700 shadow-lg">
+                        <div class="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center text-primary text-2xl mb-4">
+                            <i class="fa-solid fa-door-open"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl mb-3">破除門檻</h4>
+                        <p class="text-gray-400 leading-relaxed">即使沒有受過專業的長期美術訓練，也能將腦海中的故事與分鏡具象化，讓創意不再受限於畫工。</p>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-xl p-6 border border-slate-700 shadow-lg">
+                        <div class="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center text-secondary text-2xl mb-4">
+                            <i class="fa-solid fa-gauge-high"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl mb-3">加速產出</h4>
+                        <p class="text-gray-400 leading-relaxed">將過去需要數天甚至數週完稿的草圖、線稿與上色過程，大幅縮短至幾小時內完成。</p>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-xl p-6 border border-slate-700 shadow-lg">
+                        <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 text-2xl mb-4">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl mb-3">人類絕對優勢</h4>
+                        <p class="text-gray-400 leading-relaxed">AI 缺乏對情感連貫性、幽默感與隱喻的深刻理解，這是身為「導演」的你無可取代的價值。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 2: 漫畫風格 ================= -->
+        <div id="page-style" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-accent mr-2">2.</span>常見漫畫風格</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-accent to-pink-500 mx-auto rounded"></div>
+                <p class="mt-4 text-xl text-gray-400">了解並選擇你的視覺語言，這會大幅影響 AI 生成的結果</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Style 1 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-accent transition group">
+                    <div class="h-40 bg-gradient-to-br from-blue-900 to-indigo-900 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-pen-nib text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">經典日系動漫風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 黑白高對比、網點運用、精緻的線稿 (Line art)、賽璐璐上色 (Cel shading)。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: Japanese manga style, high contrast black and white, monochrome line art, screentone...</p>
+                    </div>
+                </div>
+
+                <!-- Style 2 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-pink-400 transition group">
+                    <div class="h-40 bg-gradient-to-br from-pink-600 to-rose-900 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-heart text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">精緻韓系美型風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 適合條漫 (Webtoon)，色彩豐富飽和、角色五官精緻、光影柔和唯美。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: Korean webtoon style, highly detailed face, vibrant colors, soft lighting, romance...</p>
+                    </div>
+                </div>
+
+                <!-- Style 3 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-blue-500 transition group">
+                    <div class="h-40 bg-gradient-to-br from-red-700 to-blue-900 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-mask text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">美式漫畫/英雄風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 粗獷的黑色陰影 (Inking)、充滿張力的肌肉線條、鮮豔的美漫網點 (Halftone)。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: American comic book style, heavy inking, dramatic shadows, halftone dots, superhero...</p>
+                    </div>
+                </div>
+
+                <!-- Style 4 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-cyan-400 transition group">
+                    <div class="h-40 bg-gradient-to-br from-cyan-900 to-purple-900 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-city text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">復古賽博龐克風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 霓虹燈光、高科技低生活、雜訊與故障藝術 (Glitch art)、80/90年代科幻動畫感。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: 90s retro anime style, cyberpunk aesthetic, neon lights, dark sci-fi, cinematic lighting...</p>
+                    </div>
+                </div>
+
+                <!-- Style 5 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-orange-400 transition group">
+                    <div class="h-40 bg-gradient-to-br from-amber-700 to-orange-900 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-paintbrush text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">歐漫/水彩插畫風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 類似法國漫畫 (Bande Dessinée)，重視環境刻畫，手繪筆觸明顯，色彩層次豐富。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: Bande Dessinée style, watercolor wash, European comic, detailed environment, artistic brushstrokes...</p>
+                    </div>
+                </div>
+
+                <!-- Style 6 -->
+                <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-yellow-500 transition group">
+                    <div class="h-40 bg-gradient-to-br from-red-800 to-yellow-600 relative flex items-center justify-center overflow-hidden">
+                        <i class="fa-solid fa-dragon text-6xl text-white/20 absolute transform group-hover:scale-110 transition duration-500"></i>
+                        <h3 class="relative z-10 text-2xl font-black text-white tracking-wider text-center drop-shadow-lg">香港武俠彩色風</h3>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-400 text-sm mb-4"><strong>特徵：</strong> 濃烈色彩對比、充滿張力的肌肉線條、華麗氣勁特效與動態速度線。</p>
+                        <p class="text-xs text-gray-500 font-mono bg-slate-900 p-2 rounded">Prompt: Hong Kong martial arts comic style, dynamic pose, glowing aura, muscular, speed lines...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <button onclick="switchPage('page-inspiration')" class="px-6 py-3 rounded-lg border border-gray-600 hover:bg-slate-800 text-white transition">
+                    選好風格了！進入劇本發想 <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 3: 靈感發想與劇本 ================= -->
+        <div id="page-inspiration" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-secondary mr-2">3.</span>靈感發想與劇本</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-secondary to-primary mx-auto rounded"></div>
+                <p class="mt-4 text-xl text-gray-400">複製提示詞，貼到 AI 聊天室，立即生成完整劇本分鏡！</p>
+            </div>
+
+            <!-- 自定義子頁籤導覽 -->
+            <div class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8">
+                <button onclick="switchSubTab('tab-short')" id="btn-tab-short" class="px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-primary/20 text-white border border-primary/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                    <i class="fa-solid fa-border-all mr-2"></i>A. 一頁式漫畫
+                </button>
+                <button onclick="switchSubTab('tab-story')" id="btn-tab-story" class="px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-slate-800 text-gray-400 border border-slate-700 hover:bg-slate-700">
+                    <i class="fa-solid fa-book-open mr-2"></i>B. 故事性漫畫
+                </button>
+                <button onclick="switchSubTab('tab-edu')" id="btn-tab-edu" class="px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-slate-800 text-gray-400 border border-slate-700 hover:bg-slate-700">
+                    <i class="fa-solid fa-chalkboard-user mr-2"></i>C. 解說式漫畫
+                </button>
+            </div>
+
+            <!-- 子頁籤內容：一頁式 -->
+            <div id="tab-short" class="tab-content active">
+                <div class="glass-panel p-6 rounded-2xl mb-8 border-l-4 border-l-primary flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">一頁式漫畫 (4~6格)</h3>
+                        <p class="text-gray-400">特點：節奏快、起承轉合迅速，最後一格通常帶有「爆點」或「笑點」。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 短篇 1 -->
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">5格</span>
+                        <h4 class="font-bold text-white text-lg mb-2">上班族週一的崩潰</h4>
+                        <span class="text-xs text-orange-400 mb-4 border border-orange-400/30 px-2 py-1 rounded inline-block w-fit">歐漫水彩插畫風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-short-1" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我寫一個「一頁式漫畫 (5格)」的劇本，主題是「上班族禮拜一早上的崩潰」。
+風格設定：歐漫水彩插畫風，畫面帶有溫暖但略顯無奈的色調。
+格式請列出每一格的：畫面描述、鏡頭角度與對白。
+第1格：週末的美好幻影
+第2格：鬧鐘響起的絕望
+第3格：行屍走肉的通勤
+第4格：到公司的第一杯咖啡
+第5格：打開Email後的終極爆點
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-short-1')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <!-- 短篇 2 -->
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">4格</span>
+                        <h4 class="font-bold text-white text-lg mb-2">貓咪的無邏輯行為</h4>
+                        <span class="text-xs text-blue-400 mb-4 border border-blue-400/30 px-2 py-1 rounded inline-block w-fit">經典日系動漫風格</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-short-2" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我設計一個幽默的「四格漫畫」劇本，主題是「貓咪對昂貴玩具不屑一顧，卻鍾愛紙箱」。
+風格設定：經典日系動漫風格，黑白高對比加上誇張的集中線特效。
+格式要求：
+第1格（起）：主人興奮拿出新貓跳台。
+第2格（承）：貓咪冷漠的特寫。
+第3格（轉）：主人失落，旁邊放著破紙箱。
+第4格（合）：貓咪瘋狂鑽進紙箱，配上主人無奈的表情。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-short-2')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <!-- 短篇 3 -->
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">6格</span>
+                        <h4 class="font-bold text-white text-lg mb-2">減肥的都市傳說</h4>
+                        <span class="text-xs text-pink-400 mb-4 border border-pink-400/30 px-2 py-1 rounded inline-block w-fit">精緻韓系美型風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-short-3" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請創作 6 格一頁式漫畫劇本，主題「明天再開始減肥的無限迴圈」。
+風格設定：精緻韓系美型風（Webtoon風格），色彩繽紛，食物要畫得超有光澤感。
+需要包含：
+1-2格：晚上信誓旦旦立毒誓。
+3-4格：隔天遇到同事請吃下午茶的掙扎。
+5格：找藉口說服自己。
+6格：大口吃下甜點的爆笑結語。
+請詳細描述表情變化以增添喜劇感。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-short-3')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <!-- 短篇 4 -->
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">4格</span>
+                        <h4 class="font-bold text-white text-lg mb-2">科技冷漠的反差萌</h4>
+                        <span class="text-xs text-red-500 mb-4 border border-red-500/30 px-2 py-1 rounded inline-block w-fit">美式漫畫/超級英雄風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-short-4" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">撰寫一個 4 格漫畫劇本。
+設定：外表冷酷的壯漢在捷運上嚴肅滑手機。
+風格設定：美式漫畫風格，粗獷黑色陰影，畫面充滿壓迫感。
+第1格：壯漢滿臉殺氣盯著螢幕。
+第2格：旁邊小孩害怕看著他。
+第3格：壯漢手機螢幕的特寫。
+第4格（反轉）：原來在看超可愛小狗影片（畫風可突變為可愛）。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-short-4')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <!-- 短篇 5 -->
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">5格</span>
+                        <h4 class="font-bold text-white text-lg mb-2">網購期待與現實</h4>
+                        <span class="text-xs text-cyan-400 mb-4 border border-cyan-400/30 px-2 py-1 rounded inline-block w-fit">復古賽博龐克風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-short-5" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請寫一個 5 格漫畫劇本，主題「網購高科技配件的期待與現實」。
+風格設定：復古賽博龐克風，霓虹色調，背景充滿雜亂的管線。
+第1格：主角看著網路上超帥的 AR 眼鏡廣告。
+第2格：興奮按下「一鍵購買」。
+第3格：無人機送來包裹。
+第4格：主角戴上後看著鏡子（造型超級崩壞或土氣）。
+第5格：殘酷現實的對比與自嘲對白。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-short-5')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 子頁籤內容：故事性 -->
+            <div id="tab-story" class="tab-content">
+                <div class="glass-panel p-6 rounded-2xl mb-8 border-l-4 border-l-secondary flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">故事性漫畫 (每頁4~6格 / 至少10頁)</h3>
+                        <p class="text-gray-400">特點：重視世界觀建立、角色成長曲線（Hero's Journey）以及劇情懸念。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-secondary bg-secondary/10 px-2 py-1 rounded">世界觀建立</span>
+                        <h4 class="font-bold text-white text-lg mb-2">賽博龐克偵探 (第1-2頁)</h4>
+                        <span class="text-xs text-cyan-400 mb-4 border border-cyan-400/30 px-2 py-1 rounded inline-block w-fit">復古賽博龐克風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-story-1" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">我想創作 10 頁科幻漫畫。背景為「賽博龐克台北 2126 年」。
+風格設定：復古賽博龐克風，充滿雨水、霓虹燈與陰影。
+1. 請先幫我設定有義體手臂的偵探主角，及其核心動機。
+2. 規劃 10 頁大綱。
+3. 幫我撰寫「第 1 頁與第 2 頁 (共10格)」的分鏡劇本。必須包含「廣角鏡頭」建立世界觀，以及主角特寫。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-story-1')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-secondary bg-secondary/10 px-2 py-1 rounded">懸疑驚悚</span>
+                        <h4 class="font-bold text-white text-lg mb-2">無人車站的秘密 (第3頁)</h4>
+                        <span class="text-xs text-gray-400 mb-4 border border-gray-400/30 px-2 py-1 rounded inline-block w-fit">黑白高對比漫畫風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-story-2" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我規劃懸疑漫畫劇本。大綱：末班車停在消失的車站，時鐘倒走。
+風格設定：黑白日系漫畫風格，重度使用黑色色塊營造壓迫感。
+請直接撰寫「第 3 頁：主角發現異狀並感到恐懼」的劇本。
+要求：本頁分為 5 格，運用「極度特寫(驚恐眼球)」與「傾斜鏡頭」，最後一格留下強烈懸念。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-story-2')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-secondary bg-secondary/10 px-2 py-1 rounded">校園奇幻</span>
+                        <h4 class="font-bold text-white text-lg mb-2">看見情緒顏色的少女 (第1-2頁)</h4>
+                        <span class="text-xs text-pink-400 mb-4 border border-pink-400/30 px-2 py-1 rounded inline-block w-fit">精緻少女/韓系美型風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-story-3" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請寫校園奇幻漫畫劇本。主角能將他人情緒看成不同顏色的氣場。
+風格設定：精緻少女/韓系美型風，背景夢幻，人物唯美。
+請提供第 1-2 頁 (每頁 4 格) 的分鏡。
+重點：清楚描述「情緒氣場」在畫面上的視覺呈現（例：憤怒是紅色火焰），並帶出她因這能力產生的社交困擾。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-story-3')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-secondary bg-secondary/10 px-2 py-1 rounded">熱血戰鬥</span>
+                        <h4 class="font-bold text-white text-lg mb-2">競技場最後一戰 (第8-9頁)</h4>
+                        <span class="text-xs text-red-500 mb-4 border border-red-500/30 px-2 py-1 rounded inline-block w-fit">美式漫畫/超級英雄風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-story-4" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">創作熱血戰鬥漫畫的高潮橋段（第 8-9 頁）。
+場景：地下格鬥場，主角遍體鱗傷。
+風格設定：美式漫畫/超級英雄風，粗線條，強烈的動作張力與網點。
+要求：每頁 5 格。包含充滿張力的「跨頁大圖」或大特寫。描述揮拳的速度線與打擊感，對白簡短有力。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-story-4')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-secondary bg-secondary/10 px-2 py-1 rounded">溫馨治癒</span>
+                        <h4 class="font-bold text-white text-lg mb-2">深夜食堂的外星客 (第4-5頁)</h4>
+                        <span class="text-xs text-orange-400 mb-4 border border-orange-400/30 px-2 py-1 rounded inline-block w-fit">歐漫水彩插畫風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-story-5" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我規劃溫馨漫畫劇本。設定：巷弄裡的深夜食堂，來了偽裝成人類的疲憊外星人。
+風格設定：歐漫水彩插畫風，暖色調，筆觸柔和。
+請撰寫第 4-5 頁劇本 (老闆端上熱湯，客人被感動)。
+要求：每頁 4 格。重點描述食物冒熱氣的視覺，以及客人喝湯後表情放鬆的細微變化。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-story-5')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 子頁籤內容：解說式 -->
+            <div id="tab-edu" class="tab-content">
+                <div class="glass-panel p-6 rounded-2xl mb-8 border-l-4 border-l-green-400 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">解說式漫畫 (新手主角與專家吉祥物)</h3>
+                        <p class="text-gray-400">特點：用圖像將抽象概念具象化。由新手主角負責提問，身為專家老師的吉祥物負責解說與主動提供建議，讓故事充滿教學性與趣味。透過提供大綱與頁數設定，讓 AI 逐步為你生成完整故事劇本。</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">科技科普</span>
+                        <h4 class="font-bold text-white text-lg mb-2">生成式 AI 原理</h4>
+                        <span class="text-xs text-blue-400 mb-4 border border-blue-400/30 px-2 py-1 rounded inline-block w-fit">經典日系動漫風 (Q版)</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-edu-1" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我寫一份完整的「圖解生成式 AI 運作」解說漫畫劇本。
+角色設定：
+1. 充滿好奇心的小豬學生 (新手主角，負責提問)
+2. 白袍貓頭鷹教授 (專家吉祥物，負責解答與引導)
+風格設定：日系動漫 Q 版風格，線條圓潤，顏色明亮。
+任務要求：
+1. 請先提供約 5 頁的故事大綱（起承轉合）。
+2. 接著，為我生成這 5 頁的詳細分鏡劇本（每頁保持 4-6 格）。
+3. 利用「圖書館找書拼貼」具象化比喻神經網路，專家吉祥物的對話要幽默易懂。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-edu-1')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">金融理財</span>
+                        <h4 class="font-bold text-white text-lg mb-2">ETF 投資指南</h4>
+                        <span class="text-xs text-pink-400 mb-4 border border-pink-400/30 px-2 py-1 rounded inline-block w-fit">精緻韓系美型風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-edu-2" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請幫我編寫一份完整的「ETF 投資指南」科普漫畫劇本。
+角色設定：
+1. 衝動消費的新鮮人企鵝 (新手主角，負責提出理財困擾)
+2. 精明理財的柴犬店長 (專家吉祥物，負責給予投資建議)
+風格設定：精緻韓系 Webtoon 風格，角色立繪精美。
+任務要求：
+1. 規劃一個總長約 6 頁的故事大綱。
+2. 寫出所有頁數的詳細分鏡劇本，每頁設定為 4-6 格。
+3. 內容需由柴犬店長用「買一籃不同口味水果」比喻買 ETF 來解釋分散風險，附具體視覺畫面與主角恍然大悟的誇張表情。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-edu-2')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">醫學健康</span>
+                        <h4 class="font-bold text-white text-lg mb-2">免疫系統防衛戰</h4>
+                        <span class="text-xs text-red-500 mb-4 border border-red-500/30 px-2 py-1 rounded inline-block w-fit">美式漫畫/超級英雄風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-edu-3" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請製作一份完整的「感冒時身體發生什麼事」醫學漫畫劇本。
+角色設定：
+1. 剛上任慌張的新兵紅血球 (新手主角，面對病毒不知所措)
+2. 經驗豐富的白血球指揮官 (專家吉祥物，負責解說戰術與指揮)
+風格設定：美式超級英雄風，畫面具有電影史詩感與爆破特效。
+任務要求：
+1. 請先提供 8 頁的劇情大綱（從病毒入侵到戰勝病毒）。
+2. 接著撰寫這 8 頁的完整分鏡劇本，每頁 4-6 格。
+3. 內容需呈現指揮官解說發燒機制，並調兵遣將對抗病毒的史詩過程。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-edu-3')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">歷史人文</span>
+                        <h4 class="font-bold text-white text-lg mb-2">文藝復興的重要性</h4>
+                        <span class="text-xs text-yellow-500 mb-4 border border-yellow-500/30 px-2 py-1 rounded inline-block w-fit">復古懷舊風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-edu-4" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請設計一份完整的歷史解說漫畫劇本，主題為「文藝復興的重要性」。
+角色設定：
+1. 對歷史興致缺缺的現代中學生 (新手主角，提出質疑與好奇)
+2. 乘坐時光機的迷你達文西 (專家吉祥物，充滿熱情地解說)
+風格設定：復古懷舊風，帶有羊皮紙紋理與墨水感。
+任務要求：
+1. 請規劃一份總長 6 頁的故事大綱。
+2. 生成完整的逐頁分鏡劇本，每頁保持 4-6 格。
+3. 必須包含介紹黑暗時代與文藝復興的對比，利用視覺上的「黑白灰暗」與「色彩爆發」做強烈對比，並由達文西詳細解說。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-edu-4')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+
+                    <div class="prompt-card bg-slate-800 rounded-xl p-6 border border-slate-700 relative flex flex-col">
+                        <span class="absolute top-4 right-4 text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">心理學</span>
+                        <h4 class="font-bold text-white text-lg mb-2">拖延症的內心劇場</h4>
+                        <span class="text-xs text-orange-400 mb-4 border border-orange-400/30 px-2 py-1 rounded inline-block w-fit">歐漫水彩插畫風</span>
+                        <div class="bg-slate-900 p-4 rounded-lg mb-4 flex-grow overflow-y-auto max-h-48">
+<pre id="p-edu-5" class="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">請寫一份完整的心理學漫畫劇本「大腦裡的拖延症」。
+角色設定：
+1. 總是愛拖延的大學生 (新手主角，深受死線逼近所苦)
+2. 住在腦袋裡的理性掌舵精靈 (專家吉祥物，提供心理學解方)
+風格設定：歐漫水彩插畫風，背景細緻，角色表現力豐富。
+任務要求：
+1. 規劃一個總長 7 頁的故事大綱，呈現從開始拖延到死線逼近恐慌怪獸出現的過程。
+2. 撰寫這 7 頁的完整分鏡內容，每頁 4-6 格。
+3. 表現主角驚嚇逃跑時，專家吉祥物冷靜提供對抗拖延症的具體建議（如番茄鐘工作法）。
+文字請用繁體中文。</pre>
+                        </div>
+                        <button onclick="copyText('p-edu-5')" class="w-full py-2 mt-auto bg-slate-700 hover:bg-slate-600 text-white rounded transition flex justify-center items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製提示詞
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 4: 圖像生成工具 ================= -->
+        <div id="page-tools" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-purple-400 mr-2">4.</span>圖像生成</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded"></div>
+            </div>
+
+            <!-- YAML 介紹 -->
+            <div class="mb-12 glass-panel rounded-2xl p-8 border-t-4 border-t-accent">
+                <div class="flex items-center mb-6">
+                    <i class="fa-solid fa-file-code text-3xl text-accent mr-4"></i>
+                    <h3 class="text-2xl font-bold text-white">進階技巧：使用 YAML 統一角色設定</h3>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div>
+                        <p class="text-gray-300 mb-4 leading-relaxed">
+                            在生成多頁漫畫時，最大的挑戰是<strong>「保持角色外觀一致性」</strong>。我們強烈建議使用 <strong>YAML 格式</strong> 來定義角色特徵。
+                        </p>
+                        <p class="text-gray-300 mb-4 leading-relaxed">
+                            YAML 是一種結構化的資料格式。將這段設定檔與劇情一起發送給 AI，它就能精準記住角色的髮色、服飾與細節，在後續生成每一格分鏡時，大幅減少「角色崩壞」或長相不一樣的機率。
+                        </p>
+                        <ul class="list-disc list-inside text-gray-400 space-y-2 text-sm mb-6">
+                            <li><strong>如何使用：</strong>將右側的 YAML 範例複製，並替換成你腦海中的角色特徵。</li>
+                            <li><strong>何時使用：</strong>在開始生成劇本或圖像前，先發送給 AI 建立角色資料庫。</li>
+                            <li><strong>風格綁定：</strong>可將前面選定的「漫畫風格」寫入 Art_Style 中。</li>
+                        </ul>
+                    </div>
+                    <div class="relative bg-[#1e1e1e] rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col">
+                        <div class="bg-[#2d2d2d] px-4 py-2 flex items-center justify-between border-b border-slate-700/50">
+                            <span class="text-gray-400 font-mono text-xs">character_profile.yaml</span>
+                            <button onclick="copyText('yaml-example')" class="text-gray-300 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs transition flex items-center gap-1">
+                                <i class="fa-regular fa-copy"></i> 複製
+                            </button>
+                        </div>
+                        <div class="p-4 overflow-x-auto custom-scrollbar">
+<pre id="yaml-example" class="text-sm text-emerald-400 font-mono whitespace-pre-wrap leading-relaxed">Character:
+  Name: "亞倫 (Aaron)"
+  Age: 17
+  Gender: "Male"
+  Appearance:
+    Hair: "Silver, messy short hair"
+    Eyes: "Heterochromia (Left: Blue, Right: Gold)"
+    Clothing: "Black tech-wear jacket, cargo pants"
+    Accessories: "Red headphones on neck"
+  Personality: "Lazy but observant"
+  Art_Style: "90s retro anime style, cyberpunk"</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4.1 常見模型 -->
+            <h3 class="text-2xl font-bold text-white mb-6 flex items-center"><i class="fa-solid fa-cube text-purple-400 mr-3"></i>常見模型 (Models)</h3>
+            <div class="glass-panel rounded-2xl overflow-hidden mb-12 border border-slate-700">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800/80 border-b border-slate-700">
+                                <th class="p-5 text-gray-300 font-semibold w-1/4">常見模型</th>
+                                <th class="p-5 text-gray-300 font-semibold w-1/3">特色優勢</th>
+                                <th class="p-5 text-gray-300 font-semibold">適用場景與漫畫製作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/50">
+                            <tr class="hover:bg-slate-800/30 transition">
+                                <td class="p-5 font-bold text-emerald-400">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-paintbrush"></i> chatGPT Image 2.0
+                                    </div>
+                                </td>
+                                <td class="p-5 text-gray-400 text-sm">擁有極強的語意理解與文字生成能力，能高度還原複雜的劇本提示與畫面指令。</td>
+                                <td class="p-5 text-gray-400 text-sm">適合需要精確控制角色動作、畫面上需要內嵌具體文字，或場景結構複雜的單格生成。</td>
+                            </tr>
+                            <tr class="hover:bg-slate-800/30 transition">
+                                <td class="p-5 font-bold text-blue-400">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-bolt"></i> Gemini Nano Banana
+                                    </div>
+                                </td>
+                                <td class="p-5 text-gray-400 text-sm">具備極高的上下文記憶能力與超快生成速度，對連續畫面的風格掌控極佳。</td>
+                                <td class="p-5 text-gray-400 text-sm">適合需要維持角色外觀一致性（連貫性）的長篇故事漫畫，或是需要快速產出大量草圖來篩選的創作者。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4.2 推薦使用平台 -->
+            <h3 class="text-2xl font-bold text-white mb-6 flex items-center"><i class="fa-solid fa-laptop-code text-pink-400 mr-3"></i>推薦使用平台 (Platforms)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <!-- Platform: chatGPT -->
+                <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-emerald-500/50 transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center text-2xl mr-4">
+                            <i class="fa-solid fa-message"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl">chatGPT</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        以對話式互動為核心的介面，可直接從劇本探討無縫過渡到圖像生成。介面直覺，極適合新手直接貼上提示詞並即時透過對話微調畫面細節。
+                    </p>
+                </div>
+
+                <!-- Platform: Gemini -->
+                <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-blue-500/50 transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-lg flex items-center justify-center text-2xl mr-4">
+                            <i class="fa-solid fa-sparkles"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl">Gemini</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        深度整合 Google 生態系的工作平台，支援超大上下文。能直接讀取雲端文件內的長篇劇本，並依賴其強大的分析能力快速產出具備連貫性的分鏡構圖。
+                    </p>
+                </div>
+
+                <!-- Platform: Google Flow -->
+                <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-purple-500/50 transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-lg flex items-center justify-center text-2xl mr-4">
+                            <i class="fa-solid fa-project-diagram"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl">Google Flow</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        專為進階創作者打造的「節點式 (Node-based)」專業 AI 創作工作流平台。允許使用者將角色模型、姿勢控制 (Pose Control)、畫風權重拆解為不同節點，實現對漫畫分鏡的絕對精確控制。
+                    </p>
+                </div>
+
+                <!-- Platform: Google Opal -->
+                <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-orange-500/50 transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center text-2xl mr-4">
+                            <i class="fa-brands fa-google"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl">Google Opal</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        專注於視覺敘事與排版的新世代「一站式創作套件」。只需匯入大綱，平台即會自動建議分鏡框排版、自動生成對話框與漫畫圖像，極大化整體漫畫的生產與發布效率。
+                    </p>
+                </div>
+
+                <!-- Platform: Codex -->
+                <div class="bg-slate-800/60 rounded-xl p-6 border border-slate-700 hover:border-teal-500/50 transition">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-teal-500/20 text-teal-400 rounded-lg flex items-center justify-center text-2xl mr-4">
+                            <i class="fa-solid fa-terminal"></i>
+                        </div>
+                        <h4 class="font-bold text-white text-xl">Codex</h4>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        針對進階使用者與開發者設計的指令化生圖平台。完美支援 YAML 角色設定檔的讀取與精確的提示詞權重控制。非常適合透過腳本化方式，批量產生高度一致且結構複雜的長篇漫畫分鏡。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 提示詞秘訣 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
+                    <div class="text-pink-500 mb-3"><i class="fa-solid fa-video text-2xl"></i></div>
+                    <h4 class="font-bold text-white mb-2">1. 運用鏡頭語言</h4>
+                    <p class="text-gray-400 text-sm">加入 <code>Close-up</code> (特寫), <code>Wide shot</code> (遠景), <code>Dutch angle</code> (傾斜) 營造電影感。</p>
+                </div>
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
+                    <div class="text-blue-500 mb-3"><i class="fa-solid fa-palette text-2xl"></i></div>
+                    <h4 class="font-bold text-white mb-2">2. 確保風格統一</h4>
+                    <p class="text-gray-400 text-sm">將第二單元選定的「漫畫風格」字眼，複製到每一張圖的生成提示詞結尾。</p>
+                </div>
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700">
+                    <div class="text-yellow-500 mb-3"><i class="fa-solid fa-face-laugh-squint text-2xl"></i></div>
+                    <h4 class="font-bold text-white mb-2">3. 具象化情緒</h4>
+                    <p class="text-gray-400 text-sm">改用 <code>tears in eyes</code>, <code>gritting teeth</code> 等直接的視覺描述取代抽象的情緒詞。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 5: Gem 助理 ================= -->
+        <div id="page-layout" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-emerald-400 mr-2">5.</span>Gem 助理</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-emerald-400 to-cyan-500 mx-auto rounded"></div>
+                <p class="mt-4 text-xl text-gray-400">將這段系統提示詞發送給 AI，即可召喚您的專屬漫畫製作助理</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-[#1e1e1e] rounded-xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col">
+                    <!-- 標題列 -->
+                    <div class="bg-[#2d2d2d] px-4 py-3 flex items-center justify-between border-b border-slate-700/50">
+                        <div class="flex items-center gap-2">
+                            <div class="flex gap-1.5 mr-4">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                            <i class="fa-solid fa-robot text-emerald-400"></i>
+                            <span class="text-gray-300 font-mono text-sm hidden sm:inline">Gem_Assistant_System_Prompt.md</span>
+                            <span class="text-gray-300 font-mono text-sm sm:hidden">System_Prompt.md</span>
+                        </div>
+                        <button onclick="copyText('gem-prompt-code')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-4 py-1.5 rounded transition flex items-center gap-2">
+                            <i class="fa-regular fa-copy"></i> 複製完整提示詞
+                        </button>
+                    </div>
+                    <!-- 內容區 -->
+                    <div class="p-6 overflow-y-auto max-h-[600px] text-gray-300 font-mono text-sm sm:text-base leading-relaxed bg-[#1e1e1e] custom-scrollbar">
+<pre id="gem-prompt-code" class="whitespace-pre-wrap font-sans text-gray-300"># 角色與目標
+你是一位專業的「AI 漫畫製作助理」，擁有專業的編劇邏輯與豐富的圖像生成提示詞（Prompt）知識。你的任務是引導使用者，透過結構化的步驟，一步步完成從概念發想到圖像生成的完整漫畫創作。
+
+# 核心規則
+1. 必須**嚴格遵守步驟順序**，不可跳躍。
+2. 每個步驟完成後，**必須停下來等待使用者回覆**，不可擅自進行下一個步驟。
+3. 態度要像專業且有耐心的指導老師，給予明確的選項與清晰的排版。
+
+---
+# 互動流程
+## 步驟 1：啟動與參數收集（階段一）
+當使用者跟你打招呼時，請發送歡迎詞，並一次列出以下 5 個問題請使用者回答（可輸入數字代號或自訂）：
+1. **漫畫類別**：[1] 一頁式漫畫 (4~6格) [2] 故事性漫畫 [3] 解說式漫畫 (主角提問、吉祥物回答)
+2. **視覺風格**：[1] 經典日系動漫風 [2] 精緻韓系美型風 [3] 美式超級英雄風 [4] 復古賽博龐克風 [5] 歐漫水彩插畫風 [6] 其他自訂風格
+3. **版面格式**：[1] 直式手機閱讀 (9:16) [2] 橫式傳統閱讀 (16:9)
+4. **漫畫主題**：請用一句話描述你想畫的故事或主題。
+5. **預計頁數**：（若選擇一頁式，則預設為 1 頁）
+*(等待使用者完整回覆這 5 項參數後，進入步驟 2)*
+
+## 步驟 2：角色設定與劇本生成（階段二）
+根據收集到的參數，為使用者生成詳細的設定檔。輸出格式需包含：
+1. **角色設定檔 (YAML 格式)**：
+   包含主角與配角/吉祥物的：名稱、性別、年齡、髮型、瞳色、服裝、招牌配件、性格關鍵字。
+2. **分鏡劇本 (按頁數展開)**：
+   每一頁必須包含 4~6 格分鏡。每一格(Panel)需列出：
+   - 畫面描述（時間、場景、角色動作、鏡頭角度如特寫/遠景）
+   - 角色對白/旁白
+   - 推薦的生圖提示詞（英文，需包含步驟 1 選定的風格關鍵字）
+*(輸出完畢後，請提示使用者進入步驟 3)*
+
+## 步驟 3：審閱與修改機制（階段三）
+詢問使用者是否滿意目前的設定：
+- 輸入 `0`：修改角色 YAML 設定。
+- 輸入 `頁碼` (例如 `1`, `2`)：修改該頁的分鏡內容。
+- 直接按 `Enter` 或輸入 `OK`：確認劇本無誤，進入下一步。
+*(根據使用者指令進行修改，直到使用者確認 OK 才進入步驟 4)*
+
+## 步驟 4：角色三視圖生成（階段四）
+劇本確認後，你需要先幫使用者「定裝」。
+請根據 YAML 設定，自動啟動圖像生成功能，為主要角色生成**「角色設定圖 (Character Reference Sheet)」**。
+- 畫面需同時包含該角色的：正面、側面、背面畫像，以及 2~3 種表情特寫。
+- 請確認使用者對角色外觀滿意後，再進入最終生圖階段。
+
+## 步驟 5：逐頁漫畫圖像生成（階段五）
+提示使用者：
+「角色定裝完成！現在準備進入正式漫畫繪製。請輸入數字 \`1\`，我將為您生成第 1 頁的分鏡圖；輸入 \`2\` 則生成第 2 頁，以此類推。」
+- 當使用者輸入頁碼，請根據該頁的劇本，**逐格（Panel by Panel）生成圖像**。
+- 生成的圖像提示詞必須帶入相同的角色外觀描述與風格關鍵字，確保畫面連貫。
+- 每生成完一頁的所有分鏡，再次詢問使用者是否要繼續生成下一頁，或需要重繪特定分鏡。</pre>
+                    </div>
+                </div>
+
+                <!-- 視覺化的步驟圖解 -->
+                <div class="mt-12 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="bg-slate-800/80 rounded-lg p-4 border border-slate-700 text-center relative">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 font-bold">1</div>
+                        <p class="text-sm text-gray-300 font-medium">啟動與<br>參數收集</p>
+                        <i class="fa-solid fa-chevron-right absolute -right-3 top-1/2 -translate-y-1/2 text-slate-600 hidden md:block"></i>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-lg p-4 border border-slate-700 text-center relative">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 font-bold">2</div>
+                        <p class="text-sm text-gray-300 font-medium">設定與<br>劇本生成</p>
+                        <i class="fa-solid fa-chevron-right absolute -right-3 top-1/2 -translate-y-1/2 text-slate-600 hidden md:block"></i>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-lg p-4 border border-slate-700 text-center relative">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 font-bold">3</div>
+                        <p class="text-sm text-gray-300 font-medium">審閱與<br>修改機制</p>
+                        <i class="fa-solid fa-chevron-right absolute -right-3 top-1/2 -translate-y-1/2 text-slate-600 hidden md:block"></i>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-lg p-4 border border-slate-700 text-center relative">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 font-bold">4</div>
+                        <p class="text-sm text-gray-300 font-medium">角色三視圖<br>定裝生成</p>
+                        <i class="fa-solid fa-chevron-right absolute -right-3 top-1/2 -translate-y-1/2 text-slate-600 hidden md:block"></i>
+                    </div>
+                    <div class="bg-slate-800/80 rounded-lg p-4 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] text-center">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-2 font-bold"><i class="fa-solid fa-check"></i></div>
+                        <p class="text-sm text-white font-bold">逐頁漫畫<br>圖像生成</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 6: 版權觀念 ================= -->
+        <div id="page-copyright" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-amber-400 mr-2">6.</span>版權觀念與發表</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-amber-400 to-orange-500 mx-auto rounded"></div>
+            </div>
+
+            <div class="bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-3xl p-8 md:p-12 max-w-5xl mx-auto">
+                <h3 class="text-2xl font-bold text-amber-400 mb-8 text-center">發布前的倫理守則與版權認知</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div class="bg-black/40 p-6 rounded-xl border border-slate-700">
+                        <i class="fa-solid fa-scale-balanced text-3xl text-amber-500 mb-4"></i>
+                        <h4 class="font-bold text-white mb-2">著作權歸屬</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">多數國家認為單純AI生圖不受版權保護。但您<strong>原創的劇本及排版組合</strong>，仍具整體著作權。</p>
+                    </div>
+                    <div class="bg-black/40 p-6 rounded-xl border border-slate-700">
+                        <i class="fa-solid fa-ban text-3xl text-red-500 mb-4"></i>
+                        <h4 class="font-bold text-white mb-2">避免侵權</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">勿在提示詞中刻意使用「特定現存藝術家」名字來模仿畫風，這對創作者極不尊重。</p>
+                    </div>
+                    <div class="bg-black/40 p-6 rounded-xl border border-slate-700">
+                        <i class="fa-solid fa-handshake-angle text-3xl text-green-500 mb-4"></i>
+                        <h4 class="font-bold text-white mb-2">誠實揭露</h4>
+                        <p class="text-sm text-gray-400 leading-relaxed">發表時請大方註明（如：<code class="text-green-400">#AIComic</code>），共同建立透明健康的創作環境。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 7: PDF輸出 ================= -->
+        <div id="page-pdf" class="page-content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4"><span class="text-blue-400 mr-2">7.</span>漫畫打包 (PDF / HTML)</h2>
+                <div class="h-1 w-20 bg-gradient-to-r from-blue-400 to-indigo-500 mx-auto rounded"></div>
+                <p class="mt-4 text-xl text-gray-400">上傳圖片並<span class="text-secondary font-bold">拖曳排序</span>，自訂壓縮比，一鍵打包成 PDF 或互動式電子書！</p>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-8 max-w-4xl mx-auto border border-slate-700">
+                <!-- 圖片上傳區塊 -->
+                <div id="drop-zone" class="border-2 border-dashed border-slate-600 rounded-xl p-10 text-center hover:border-blue-400 hover:bg-blue-900/10 transition cursor-pointer mb-6 relative">
+                    <input type="file" id="file-input" multiple accept="image/png, image/jpeg, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    <i class="fa-solid fa-cloud-arrow-up text-5xl text-gray-400 mb-4 pointer-events-none"></i>
+                    <h3 class="text-xl font-bold text-white mb-2 pointer-events-none">點擊或拖曳圖片至此處</h3>
+                    <p class="text-gray-400 text-sm pointer-events-none">支援 JPG, PNG, WEBP。可一次選擇多張，上傳後可直接拖曳縮圖更改順序。</p>
+                </div>
+
+                <!-- 預覽區塊 -->
+                <div id="preview-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8 empty:hidden"></div>
+
+                <!-- 設定與生成區塊 -->
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-700 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="w-full md:w-1/3">
+                        <label for="quality-slider" class="block text-sm font-medium text-gray-300 mb-2 flex justify-between">
+                            <span>圖片壓縮畫質 (由低到高)</span>
+                            <span id="quality-val" class="text-blue-400 font-bold">80%</span>
+                        </label>
+                        <input type="range" id="quality-slider" min="10" max="100" value="80" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <p class="text-xs text-gray-500 mt-2">數值越低檔案越小，但畫質會下降。</p>
+                    </div>
+                    <div class="w-full md:w-2/3 flex flex-col sm:flex-row gap-4">
+                        <button id="preview-html-btn" onclick="previewHTML()" class="flex-1 py-4 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-eye mr-2"></i> 網頁內預覽
+                        </button>
+                        <button id="generate-html-btn" onclick="generateHTML()" class="flex-1 py-4 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-lg hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-brands fa-html5 mr-2"></i> 下載 HTML
+                        </button>
+                        <button id="generate-pdf-btn" onclick="generatePDF()" class="flex-1 py-4 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-file-pdf mr-2"></i> 下載 PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 預覽彈出視窗 (Modal) -->
+    <div id="preview-modal" class="fixed inset-0 z-[100] bg-black/90 hidden flex-col">
+        <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 shadow-lg">
+            <h3 class="text-white font-bold text-lg"><i class="fa-solid fa-book-open text-secondary mr-2"></i>互動電子書預覽</h3>
+            <button onclick="closePreview()" class="text-gray-400 hover:text-white hover:bg-slate-800 rounded-full w-10 h-10 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-2xl"></i>
+            </button>
+        </div>
+        <div class="flex-grow relative">
+            <iframe id="preview-iframe" class="absolute inset-0 w-full h-full border-none bg-slate-950"></iframe>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900/50 py-8 text-center mt-auto">
+        <div class="max-w-6xl mx-auto px-4">
+            <p class="text-gray-500 font-medium tracking-wider mb-2">AI COMIC WORKSHOP &copy; 2026</p>
+            <p class="text-sm text-gray-600">設計為教學用途，鼓勵創新與負責任的 AI 使用。</p>
+        </div>
+    </footer>
+
+    <!-- Toast 通知 -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800 border border-primary/50 text-white px-6 py-3 rounded-full shadow-2xl shadow-primary/20 transition-all duration-300 opacity-0 pointer-events-none translate-y-4 z-50 flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toast-message" class="font-medium tracking-wide">提示詞已複製到剪貼簿！</span>
+    </div>
+
+    <script>
+        // 主頁面 Tab 切換邏輯
+        function switchPage(pageId) {
+            // 隱藏所有頁面
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            // 顯示目標頁面
+            document.getElementById(pageId).classList.add('active');
+            window.scrollTo(0, 0); // 回到頂部
+
+            // 更新桌面版導覽列狀態
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            const activeDesktopLink = document.querySelector(`.nav-link[onclick="switchPage('${pageId}')"]`);
+            if (activeDesktopLink) activeDesktopLink.classList.add('active');
+
+            // 更新行動版導覽列狀態並關閉選單
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.classList.remove('text-secondary', 'active-mobile');
+            });
+            const activeMobileLink = document.querySelector(`.mobile-nav-link[onclick="switchPage('${pageId}')"]`);
+            if (activeMobileLink) activeMobileLink.classList.add('text-secondary', 'active-mobile');
+            
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        // 靈感發想內的子頁籤切換邏輯
+        function switchSubTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(btn => {
+                btn.className = "px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-slate-800 text-gray-400 border border-slate-700 hover:bg-slate-700";
+            });
+
+            document.getElementById(tabId).classList.add('active');
+
+            const activeBtn = document.getElementById('btn-tab-' + tabId.replace('tab-', ''));
+            if(tabId === 'tab-short') {
+                activeBtn.className = "px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-primary/20 text-white border border-primary/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]";
+            } else if (tabId === 'tab-story') {
+                activeBtn.className = "px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-secondary/20 text-white border border-secondary/50 shadow-[0_0_15px_rgba(34,211,238,0.3)]";
+            } else if (tabId === 'tab-edu') {
+                activeBtn.className = "px-6 py-3 rounded-lg font-bold transition-all duration-300 bg-green-500/20 text-white border border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.3)]";
+            }
+        }
+
+        // 複製文字功能
+        function copyText(elementId) {
+            const textToCopy = document.getElementById(elementId).innerText;
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textToCopy).then(showToast).catch(err => fallbackCopyTextToClipboard(textToCopy));
+            } else {
+                fallbackCopyTextToClipboard(textToCopy);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if(successful) showToast();
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('opacity-0', 'translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-4');
+            }, 2500);
+        }
+
+        // 行動版選單開關
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // ================= PDF 生成邏輯 =================
+        let uploadedFiles = [];
+        let draggedItemIndex = null;
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const previewContainer = document.getElementById('preview-container');
+        const qualitySlider = document.getElementById('quality-slider');
+        const qualityVal = document.getElementById('quality-val');
+
+        if(qualitySlider) {
+            // 監聽壓縮比拉桿
+            qualitySlider.addEventListener('input', (e) => {
+                qualityVal.textContent = e.target.value + '%';
+            });
+            
+            // 處理檔案選擇
+            fileInput.addEventListener('change', handleFiles);
+            
+            // 處理拖曳事件
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('border-blue-400', 'bg-blue-900/10'), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-blue-400', 'bg-blue-900/10'), false);
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles({ target: { files: files } });
+            });
+        }
+
+        function handleFiles(e) {
+            const files = Array.from(e.target.files).filter(file => file.type.startsWith('image/'));
+            // 為每個檔案建立一個同步的預覽 URL，解決非同步讀取造成的重複渲染與順序錯亂問題
+            files.forEach(file => {
+                file.previewUrl = URL.createObjectURL(file);
+                uploadedFiles.push(file);
+            });
+            renderPreview();
+            fileInput.value = ''; // 允許重複選擇同一個檔案
+        }
+
+        function removeFile(index) {
+            const removed = uploadedFiles.splice(index, 1)[0];
+            if (removed && removed.previewUrl) {
+                URL.revokeObjectURL(removed.previewUrl); // 釋放記憶體
+            }
+            renderPreview();
+        }
+
+        function renderPreview() {
+            previewContainer.innerHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                // 移除 aspect-[3/4]，設定固定高度 h-72 (約288px)，並讓內部元素置中對齊
+                div.className = 'relative group h-72 bg-slate-800 rounded-lg overflow-hidden border border-slate-600 shadow-sm cursor-move flex items-center justify-center p-2';
+                div.draggable = true;
+                div.innerHTML = `
+                    <img src="${file.previewUrl}" class="max-w-full max-h-full object-contain pointer-events-none">
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                        <button onclick="removeFile(${index})" class="bg-red-500 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-red-600 transition shadow-lg text-xl" title="刪除">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <span class="absolute top-2 left-2 bg-black/80 text-white text-sm px-3 py-1 rounded font-bold font-mono border border-slate-600 shadow-md">${index + 1}</span>
+                `;
+
+                // 拖曳排序事件
+                div.addEventListener('dragstart', (ev) => {
+                    draggedItemIndex = index;
+                    ev.dataTransfer.effectAllowed = 'move';
+                    setTimeout(() => div.classList.add('opacity-40'), 0);
+                });
+                
+                div.addEventListener('dragend', () => {
+                    div.classList.remove('opacity-40');
+                    draggedItemIndex = null;
+                });
+                
+                div.addEventListener('dragover', (ev) => {
+                    ev.preventDefault();
+                    ev.dataTransfer.dropEffect = 'move';
+                    div.classList.add('border-blue-500', 'border-2');
+                });
+                
+                div.addEventListener('dragleave', () => {
+                    div.classList.remove('border-blue-500', 'border-2');
+                });
+                
+                div.addEventListener('drop', (ev) => {
+                    ev.preventDefault();
+                    div.classList.remove('border-blue-500', 'border-2');
+                    if (draggedItemIndex !== null && draggedItemIndex !== index) {
+                        // 更新陣列順序 (穩定搬移邏輯)
+                        const draggedFile = uploadedFiles.splice(draggedItemIndex, 1)[0];
+                        uploadedFiles.splice(index, 0, draggedFile);
+                        renderPreview();
+                    }
+                });
+
+                previewContainer.appendChild(div);
+            });
+        }
+
+        function processImage(file, quality) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#FFFFFF'; // 防止透明 PNG 變黑底
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        // 轉換為 JPEG 以利壓縮
+                        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve({ dataUrl, width: img.width, height: img.height });
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function createHTMLBlob() {
+            const quality = parseInt(qualitySlider.value) / 100;
+            const base64Images = [];
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const imgData = await processImage(uploadedFiles[i], quality);
+                base64Images.push(imgData.dataUrl);
+            }
+
+            const scriptEnd = "</" + "script>";
+            
+            const htmlTemplate = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 漫畫電子書</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { margin: 0; background-color: #0f172a; color: white; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
+        #viewer-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; cursor: grab; background-image: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);}
+        #viewer-container:active { cursor: grabbing; }
+        #page-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.2s ease-out; pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .toolbar { background-color: #1e293b; padding: 15px 20px; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; border-top: 1px solid #334155; z-index: 10; box-shadow: 0 -4px 15px rgba(0,0,0,0.3);}
+        button { background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+        button:hover { background-color: #2563eb; }
+        button:disabled { background-color: #475569; cursor: not-allowed; opacity: 0.5; }
+        .page-info { display: flex; align-items: center; gap: 10px; font-size: 16px; background: #0f172a; padding: 8px 15px; border-radius: 20px; border: 1px solid #334155; }
+        input[type="number"] { width: 60px; text-align: center; background: #334155; color: white; border: 1px solid #475569; padding: 5px; border-radius: 4px; -moz-appearance: textfield; font-weight: bold; font-size: 16px; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .zoom-controls { display: flex; gap: 8px; margin-left: 10px; border-left: 1px solid #475569; padding-left: 15px;}
+        .zoom-btn { background-color: #475569; padding: 10px 15px; }
+        .zoom-btn:hover { background-color: #64748b; }
+    </style>
+</head>
+<body>
+    <div id="viewer-container">
+        <img id="page-img" src="" alt="漫畫頁面">
+    </div>
+    <div class="toolbar">
+        <button id="btn-prev" onclick="changePage(-1)"><i class="fa-solid fa-chevron-left"></i> 上一頁</button>
+        <div class="page-info">
+            <span>第</span>
+            <input type="number" id="page-input" min="1" onchange="jumpToPage()">
+            <span>/ <span id="total-pages"></span> 頁</span>
+        </div>
+        <button id="btn-next" onclick="changePage(1)">下一頁 <i class="fa-solid fa-chevron-right"></i></button>
+        
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoom(-0.2)" title="縮小"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+            <button class="zoom-btn" onclick="resetZoom()" title="還原大小"><i class="fa-solid fa-compress"></i></button>
+            <button class="zoom-btn" onclick="zoom(0.2)" title="放大"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const pages = ${JSON.stringify(base64Images)};
+        let currentPage = 0;
+        let currentZoom = 1;
+        let translateX = 0, translateY = 0;
+        let isDragging = false;
+        let startX, startY;
+
+        const img = document.getElementById('page-img');
+        const container = document.getElementById('viewer-container');
+        const input = document.getElementById('page-input');
+        const totalSpan = document.getElementById('total-pages');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        totalSpan.innerText = pages.length;
+
+        function renderPage() {
+            if (currentPage < 0) currentPage = 0;
+            if (currentPage >= pages.length) currentPage = pages.length - 1;
+            
+            img.src = pages[currentPage];
+            input.value = currentPage + 1;
+            
+            btnPrev.disabled = (currentPage === 0);
+            btnNext.disabled = (currentPage === pages.length - 1);
+            
+            resetZoom();
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderPage();
+        }
+
+        function jumpToPage() {
+            let p = parseInt(input.value) - 1;
+            if (isNaN(p) || p < 0) p = 0;
+            if (p >= pages.length) p = pages.length - 1;
+            currentPage = p;
+            renderPage();
+        }
+
+        function zoom(delta) {
+            currentZoom += delta;
+            if (currentZoom < 0.2) currentZoom = 0.2;
+            if (currentZoom > 5) currentZoom = 5;
+            updateTransform();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        function updateTransform() {
+            img.style.transform = \`translate(\${translateX}px, \${translateY}px) scale(\${currentZoom})\`;
+        }
+
+        // 拖曳畫面邏輯
+        container.addEventListener('mousedown', (e) => {
+            if (currentZoom <= 1) return;
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        window.addEventListener('mouseleave', () => { isDragging = false; });
+
+        // 滾輪縮放
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if(e.deltaY < 0) { zoom(0.1); }
+            else { zoom(-0.1); }
+        }, { passive: false });
+
+        // 鍵盤操作 (方向鍵翻頁、加減號縮放)
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight' || e.key === 'ArrowDown') changePage(1);
+            if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') changePage(-1);
+            if(e.key === '+' || e.key === '=') zoom(0.2);
+            if(e.key === '-') zoom(-0.2);
+            if(e.key === '0') resetZoom();
+        });
+
+        // 初始渲染
+        renderPage();
+    ` + scriptEnd + `
+</body>
+</html>`;
+
+            return new Blob([htmlTemplate], { type: 'text/html' });
+        }
+
+        async function previewHTML() {
+            if (uploadedFiles.length === 0) {
+                showEmptyError();
+                return;
+            }
+            const btn = document.getElementById('preview-html-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>載入中...';
+            btn.disabled = true;
+
+            try {
+                const blob = await createHTMLBlob();
+                const url = URL.createObjectURL(blob);
+                const iframe = document.getElementById('preview-iframe');
+                iframe.src = url;
+                
+                const modal = document.getElementById('preview-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } catch (error) {
+                console.error("預覽產生失敗：", error);
+                showErrorToast("預覽產生失敗");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        function closePreview() {
+            const modal = document.getElementById('preview-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            const iframe = document.getElementById('preview-iframe');
+            if(iframe.src) {
+                URL.revokeObjectURL(iframe.src);
+                iframe.src = '';
+            }
+        }
+
+        async function generateHTML() {
+            if (uploadedFiles.length === 0) {
+                showEmptyError();
+                return;
+            }
+
+            const btn = document.getElementById('generate-html-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>處理中...';
+            btn.disabled = true;
+
+            try {
+                const blob = await createHTMLBlob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'AI_Comic_eBook.html';
+                link.click();
+                URL.revokeObjectURL(link.href);
+
+                // 成功訊息
+                const toast = document.getElementById('toast');
+                const originalHtml = toast.innerHTML;
+                toast.innerHTML = '<i class="fa-solid fa-circle-check text-green-400"></i><span class="font-medium tracking-wide text-white">HTML 電子書下載成功！</span>';
+                showToast();
+                setTimeout(() => toast.innerHTML = originalHtml, 3000);
+
+            } catch (error) {
+                console.error("HTML 產生失敗：", error);
+                showErrorToast("產生 HTML 時發生錯誤");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        function showEmptyError() {
+            const toast = document.getElementById('toast');
+            const originalHtml = toast.innerHTML;
+            toast.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-400"></i><span class="font-medium tracking-wide text-white">請先上傳至少一張圖片！</span>';
+            showToast();
+            setTimeout(() => toast.innerHTML = originalHtml, 3000);
+        }
+
+        function showErrorToast(msg) {
+            const toast = document.getElementById('toast');
+            const originalHtml = toast.innerHTML;
+            toast.innerHTML = `<i class="fa-solid fa-circle-xmark text-red-500"></i><span class="font-medium tracking-wide text-white">${msg}</span>`;
+            showToast();
+            setTimeout(() => toast.innerHTML = originalHtml, 3000);
+        }
+
+        async function generatePDF() {
+            if (uploadedFiles.length === 0) {
+                // 借用 Toast 顯示錯誤
+                const toast = document.getElementById('toast');
+                const originalHtml = toast.innerHTML;
+                toast.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-400"></i><span class="font-medium tracking-wide text-white">請先上傳至少一張圖片！</span>';
+                showToast();
+                setTimeout(() => toast.innerHTML = originalHtml, 3000);
+                return;
+            }
+
+            const btn = document.getElementById('generate-pdf-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>PDF 處理中...';
+            btn.disabled = true;
+
+            try {
+                const quality = parseInt(qualitySlider.value) / 100;
+                const { jsPDF } = window.jspdf;
+                // 使用 A4 尺寸
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    if (i > 0) doc.addPage();
+
+                    const imgData = await processImage(uploadedFiles[i], quality);
+                    
+                    // 計算縮放比例，留 5% 邊距 (paddingFactor = 0.95)
+                    let imgWidth = imgData.width;
+                    let imgHeight = imgData.height;
+                    const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+                    const paddingFactor = 0.95;
+                    const finalWidth = imgWidth * ratio * paddingFactor;
+                    const finalHeight = imgHeight * ratio * paddingFactor;
+                    
+                    // 居中計算
+                    const x = (pageWidth - finalWidth) / 2;
+                    const y = (pageHeight - finalHeight) / 2;
+                    
+                    doc.addImage(imgData.dataUrl, 'JPEG', x, y, finalWidth, finalHeight);
+                }
+
+                doc.save('AI_Comic_Output.pdf');
+                
+                // 成功訊息
+                const toastMsg = document.getElementById('toast-message');
+                const originalMsg = toastMsg.innerText;
+                toastMsg.innerText = 'PDF 輸出成功！';
+                showToast();
+                setTimeout(() => toastMsg.innerText = originalMsg, 3000);
+
+            } catch (error) {
+                console.error("PDF 產生失敗：", error);
+                // 失敗訊息
+                const toast = document.getElementById('toast');
+                const originalHtml = toast.innerHTML;
+                toast.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i><span class="font-medium tracking-wide text-white">產生 PDF 時發生錯誤</span>';
+                showToast();
+                setTimeout(() => toast.innerHTML = originalHtml, 3000);
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
